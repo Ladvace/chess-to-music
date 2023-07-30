@@ -44,39 +44,68 @@ let recorder: Tone.Recorder | null = null;
 let recordingUrl: string | null = null;
 
 const piece2duration = (move: string): string => {
-  if (move.startsWith("N")) {
-    return "4n";
-  } else if (move.startsWith("B")) {
-    return "8n";
-  } else if (move.startsWith("R")) {
-    return "2n";
-  } else if (move.startsWith("Q")) {
-    return "1m";
-  } else {
-    return "16n";
+  switch (move.charAt(0)) {
+    case "N": // Knight
+      return "4n";
+    case "B": // Bishop
+      return "8n";
+    case "R": // Rook
+      return "2n";
+    case "Q": // Queen
+      return "1m";
+    case "K": // King
+      return "2m";
+    default: // Pawn
+      return "16n";
   }
 };
 
 const piece2volume = (move: string): number => {
-  if (move.startsWith("N")) {
-    return 0.5;
-  } else if (move.startsWith("B")) {
-    return 0.6;
-  } else if (move.startsWith("R")) {
-    return 0.7;
-  } else if (move.startsWith("Q")) {
-    return 0.8;
-  } else {
-    return 0.4;
+  switch (move.charAt(0)) {
+    case "N": // Knight
+      return 0.5;
+    case "B": // Bishop
+      return 0.6;
+    case "R": // Rook
+      return 0.7;
+    case "Q": // Queen
+      return 0.8;
+    case "K": // King
+      return 0.9;
+    default: // Pawn
+      return 0.4;
   }
 };
 
 const move2note = (move: string): string => {
-  const square = move.length === 3 ? move.substring(1) : move.substring(0, 2);
+  const specialMoves: { [key: string]: string } = {
+    "O-O": "C4", // kingside castling
+    "O-O-O": "D4", // queenside castling
+    "+": "E4", // check
+    "#": "F4", // checkmate
+    "e.p.": "G4", // en passant
+  };
+
+  // Check if the move contains any of the special moves keys
+  const specialMoveKey = Object.keys(specialMoves).find((key) =>
+    move.includes(key)
+  );
+  if (specialMoveKey) {
+    return specialMoves[specialMoveKey];
+  }
+
+  // Check if move is a promotion (like "e8=Q")
+  if (move.includes("=")) {
+    move = move.substring(0, move.indexOf("="));
+  }
+
+  // The last two characters of the move string represent the destination square
+  const square = move.substring(move.length - 2);
   const rank = parseInt(square.substring(1));
   const notes = ["C", "D", "E", "F", "G", "A", "B"];
   const octave = Math.floor((rank - 1) / notes.length) + 4;
   const note = notes[(rank - 1) % notes.length];
+
   return note + octave;
 };
 
@@ -107,6 +136,7 @@ const generateChessMusic = async (pgn: string): Promise<number> => {
   recorder.start();
 
   const lastMoveTime = parsed[0].moves.length * delayBetweenNotes;
+  console.log("AAA", sequence);
   setTimeout(() => {
     sequence.stop();
     Tone.Transport.cancel();
@@ -123,6 +153,7 @@ const ChessMusicGenerator = () => {
   let progressInterval: ReturnType<typeof setTimeout>;
 
   const onStart = async () => {
+    if (!pgn()) return;
     setIsPlaying(true);
     const duration = await generateChessMusic(pgn());
     setTotalDuration(duration);
@@ -194,50 +225,50 @@ const ChessMusicGenerator = () => {
       <textarea
         value={pgn()}
         onInput={(e) => setPgn(e.currentTarget.value)}
-        class="bg-gray-700 p-3 w-full h-64 text-white mb-4 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-600"
+        class="bg-gray-700 p-3 w-full h-64 text-white mb-4 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-600 max-w-screen-lg"
         placeholder="Enter your PGN here..."
       />
       <Show when={totalDuration()}>
-        <div class="w-full mb-4 bg-gray-500 rounded-full h-4 overflow-hidden">
+        <div class="w-full mb-4 bg-gray-500 rounded-full h-2 overflow-hidden max-w-screen-lg">
           <div
             class="h-full bg-green-500"
             style={`width: ${(progress() / totalDuration()) * 100}%`}
           />
         </div>
       </Show>
-      <div class="flex flex-col sm:flex-row gap-2">
+      <div class="flex flex-col sm:flex-row gap-2 justify-center w-full">
         <button
           onClick={onStart}
-          disabled={isPlaying()}
-          class="bg-green-500 px-4 py-2 rounded-md disabled:cursor-not-allowed"
+          disabled={isPlaying() || !pgn()}
+          class="bg-green-500 px-4 py-2 rounded-md disabled:cursor-not-allowed disabled:bg-green-800 disabled:opacity-50"
         >
           Start
         </button>
         <button
           onClick={onStop}
           disabled={!isPlaying()}
-          class="bg-red-500 px-4 py-2 rounded-md disabled:cursor-not-allowed"
+          class="bg-red-500 px-4 py-2 rounded-md disabled:cursor-not-allowed disabled:bg-red-800 disabled:opacity-50"
         >
           Stop
         </button>
         <button
           onClick={onResume}
           disabled={isPlaying() || progress() === 0}
-          class="bg-blue-500 px-4 py-2 rounded-md disabled:cursor-not-allowed"
+          class="bg-blue-500 px-4 py-2 rounded-md disabled:cursor-not-allowed disabled:bg-blue-800 disabled:opacity-50"
         >
           Resume
         </button>
         <button
           onClick={onRestart}
           disabled={!isPlaying() && progress() === 0}
-          class="bg-yellow-500 px-4 py-2 rounded-md disabled:cursor-not-allowed"
+          class="bg-yellow-500 px-4 py-2 rounded-md disabled:cursor-not-allowed disabled:bg-yellow-800 disabled:opacity-50"
         >
           Restart
         </button>
         <button
           onClick={onDownload}
           disabled={progress() === totalDuration()}
-          class="bg-purple-500 px-4 py-2 rounded-md disabled:cursor-not-allowed"
+          class="bg-purple-500 px-4 py-2 rounded-md disabled:cursor-not-allowed disabled:bg-purple-800 disabled:opacity-50"
         >
           Download
         </button>
