@@ -17,21 +17,6 @@ let timeouts: number[] = [];
 let recorder: Tone.Recorder | null = null;
 let recordingUrl: string | null = null;
 
-// Function to determine duration of note based on the piece moved
-const piece2duration = (move: string): string => {
-  if (move.startsWith("N")) {
-    return "4n";
-  } else if (move.startsWith("B")) {
-    return "8n";
-  } else if (move.startsWith("R")) {
-    return "2n";
-  } else if (move.startsWith("Q")) {
-    return "1m";
-  } else {
-    return "16n";
-  }
-};
-
 // Function to determine volume of note based on the piece moved
 const piece2volume = (move: string): number => {
   if (move.startsWith("N")) {
@@ -47,12 +32,28 @@ const piece2volume = (move: string): number => {
   }
 };
 
+const piece2octave = (move: string): number => {
+  if (move.startsWith("N")) {
+    return 5;
+  } else if (move.startsWith("B")) {
+    return 4;
+  } else if (move.startsWith("R")) {
+    return 6;
+  } else if (move.startsWith("Q")) {
+    return 3;
+  } else {
+    return 4;
+  }
+};
+
 const move2note = (move: string): string => {
-  const square = move.length === 3 ? move.substring(1) : move.substring(0, 2);
-  const rank = parseInt(square.substring(1));
+  const square = move.length === 3 ? move.substring(1) : move.substring(2, 4);
+  const file = square.charAt(0);
+  const rank = parseInt(square.charAt(1));
   const notes = ["C", "D", "E", "F", "G", "A", "B"];
-  const octave = Math.floor((rank - 1) / notes.length) + 4;
-  const note = notes[(rank - 1) % notes.length];
+  const noteIndex = (file.charCodeAt(0) - "a".charCodeAt(0) + rank - 1) % notes.length;
+  const note = notes[noteIndex];
+  const octave = piece2octave(move);
   return note + octave;
 };
 
@@ -66,13 +67,12 @@ const generateChessMusic = async (pgn: string): Promise<void> => {
 
   parsed[0].moves.forEach((move, index) => {
     const note = move2note(move.move);
-    const duration = piece2duration(move.move);
     const volume = piece2volume(move.move);
     if (note) {
       // Ensure that note is not null before triggering sound
       timeouts.push(
         setTimeout(
-          () => piano.triggerAttackRelease(note, duration, Tone.now(), volume),
+          () => piano.triggerAttackRelease(note, '8n', Tone.now(), volume),
           index * 500
         )
       );
