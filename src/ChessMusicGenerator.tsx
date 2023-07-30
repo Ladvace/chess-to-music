@@ -131,18 +131,48 @@ const ChessMusicGenerator = () => {
   };
 
   return (
-    <div>
-      <h1>Chess Music Generator</h1>
-      <textarea value={pgn()} onInput={(e) => setPgn(e.currentTarget.value)} />
-      <button onClick={onStart} disabled={isPlaying()}>
-        Start Music
-      </button>
-      <button onClick={onStop}>Stop Music</button>
-      <button onClick={onResume} disabled={isPlaying()}>
-        Resume Music
-      </button>
-      <button onClick={onRestart}>Restart Music</button>
-      <button onClick={onDownload}>Download Music</button>
+    <div class="h-full w-full bg-gray-800 text-white p-6 flex flex-col items-center justify-center">
+      <h1 class="text-4xl font-bold mb-6">Chess Music Generator</h1>
+      <textarea
+        value={pgn()}
+        onInput={(e) => setPgn(e.currentTarget.value)}
+        class="bg-gray-700 p-3 w-full h-64 text-white mb-4 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-600"
+        placeholder="Enter your PGN here..."
+      />
+      <div class="flex gap-2">
+        <button
+          onClick={onStart}
+          disabled={isPlaying()}
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Start Music
+        </button>
+        <button
+          onClick={onStop}
+          class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Stop Music
+        </button>
+        <button
+          onClick={onResume}
+          disabled={isPlaying()}
+          class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Resume Music
+        </button>
+        <button
+          onClick={onRestart}
+          class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Restart Music
+        </button>
+        <button
+          onClick={onDownload}
+          class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Download Music
+        </button>
+      </div>
     </div>
   );
 };
