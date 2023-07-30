@@ -1,44 +1,46 @@
-import { createSignal, Show } from 'solid-js';
-import * as Tone from 'tone';
-import pgnParser from 'pgn-parser';
+import { createSignal } from "solid-js";
+import * as Tone from "tone";
+import pgnParser from "pgn-parser";
 
 const piano = new Tone.Sampler({
   urls: {
-    C4: 'C4.mp3',
-    'D#4': 'Ds4.mp3',
-    'F#4': 'Fs4.mp3',
-    A4: 'A4.mp3',
+    C4: "C4.mp3",
+    "D#4": "Ds4.mp3",
+    "F#4": "Fs4.mp3",
+    A4: "A4.mp3",
   },
   release: 1,
-  baseUrl: 'https://tonejs.github.io/audio/salamander/',
+  baseUrl: "https://tonejs.github.io/audio/salamander/",
 }).toDestination();
 
 let timeouts: number[] = [];
+let recorder: Tone.Recorder | null = null;
+let recordingUrl: string | null = null;
 
 // Function to determine duration of note based on the piece moved
 const piece2duration = (move: string): string => {
-  if (move.startsWith('N')) {
-    return '4n';
-  } else if (move.startsWith('B')) {
-    return '8n';
-  } else if (move.startsWith('R')) {
-    return '2n';
-  } else if (move.startsWith('Q')) {
-    return '1m';
+  if (move.startsWith("N")) {
+    return "4n";
+  } else if (move.startsWith("B")) {
+    return "8n";
+  } else if (move.startsWith("R")) {
+    return "2n";
+  } else if (move.startsWith("Q")) {
+    return "1m";
   } else {
-    return '16n';
+    return "16n";
   }
 };
 
 // Function to determine volume of note based on the piece moved
 const piece2volume = (move: string): number => {
-  if (move.startsWith('N')) {
+  if (move.startsWith("N")) {
     return 0.5;
-  } else if (move.startsWith('B')) {
+  } else if (move.startsWith("B")) {
     return 0.6;
-  } else if (move.startsWith('R')) {
+  } else if (move.startsWith("R")) {
     return 0.7;
-  } else if (move.startsWith('Q')) {
+  } else if (move.startsWith("Q")) {
     return 0.8;
   } else {
     return 0.4;
@@ -46,9 +48,9 @@ const piece2volume = (move: string): number => {
 };
 
 const move2note = (move: string): string => {
-  const square = move.length === 3 ? move.substring(1) : move;
+  const square = move.length === 3 ? move.substring(1) : move.substring(0, 2);
   const rank = parseInt(square.substring(1));
-  const notes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  const notes = ["C", "D", "E", "F", "G", "A", "B"];
   const octave = Math.floor((rank - 1) / notes.length) + 4;
   const note = notes[(rank - 1) % notes.length];
   return note + octave;
@@ -69,14 +71,22 @@ const generateChessMusic = async (pgn: string): Promise<void> => {
     if (note) {
       // Ensure that note is not null before triggering sound
       timeouts.push(
-        setTimeout(() => piano.triggerAttackRelease(note, duration, Tone.now(), volume), index * 500)
+        setTimeout(
+          () => piano.triggerAttackRelease(note, duration, Tone.now(), volume),
+          index * 500
+        )
       );
     }
   });
+
+  // Start recording
+  recorder = new Tone.Recorder();
+  piano.connect(recorder);
+  recorder.start();
 };
 
 const ChessMusicGenerator = () => {
-  const [pgn, setPgn] = createSignal('');
+  const [pgn, setPgn] = createSignal("");
   const [isPlaying, setIsPlaying] = createSignal(false);
 
   const onStart = async () => {
@@ -84,11 +94,28 @@ const ChessMusicGenerator = () => {
     await generateChessMusic(pgn());
   };
 
-  const onStop = () => {
+  const onStop = async () => {
     setIsPlaying(false);
     // Clear all timeouts and stop the music
     timeouts.forEach((timeout) => clearTimeout(timeout));
     piano.releaseAll();
+
+    // Stop the recording and generate a Blob
+    if (recorder) {
+      const recording = await recorder.stop();
+      recordingUrl = URL.createObjectURL(recording);
+      recorder.dispose();
+      recorder = null;
+    }
+  };
+
+  const onDownload = () => {
+    if (recordingUrl) {
+      const link = document.createElement("a");
+      link.href = recordingUrl;
+      link.download = "chess-music.mp3";
+      link.click();
+    }
   };
 
   const onResume = async () => {
@@ -115,6 +142,7 @@ const ChessMusicGenerator = () => {
         Resume Music
       </button>
       <button onClick={onRestart}>Restart Music</button>
+      <button onClick={onDownload}>Download Music</button>
     </div>
   );
 };
