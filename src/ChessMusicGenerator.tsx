@@ -22,20 +22,24 @@ const reverb = new Tone.Reverb({
 piano.connect(reverb);
 
 // Add a delay effect
-const delay = new Tone.FeedbackDelay('8n', 0.5).toDestination();
+const delay = new Tone.FeedbackDelay("8n", 0.5).toDestination();
 piano.connect(delay);
 
 // Use a Tone.Sequence for more dynamic beat
 const synth = new Tone.Synth().toDestination();
-const notes = ['C2', 'D2', 'E2', 'A2'];
-const sequence = new Tone.Sequence((time, note) => {
-  synth.triggerAttackRelease(note, '8n', time);
-}, notes, '4n').start(0);
+const notes = ["C2", "D2", "E2", "A2"];
+const sequence = new Tone.Sequence(
+  (time, note) => {
+    synth.triggerAttackRelease(note, "8n", time);
+  },
+  notes,
+  "4n"
+).start(0);
 
 // Vary the reverb effect over time
-Tone.Transport.scheduleRepeat(time => {
+Tone.Transport.scheduleRepeat((time) => {
   reverb.wet.value = Math.random() * 0.5;
-}, '4n');
+}, "4n");
 
 // Start the transport
 Tone.Transport.start();
@@ -143,6 +147,18 @@ const ChessMusicGenerator = () => {
     }
   };
 
+  const onResume = async () => {
+    if (!isPlaying()) {
+      setIsPlaying(true);
+      await generateChessMusic(pgn());
+    }
+  };
+
+  const onRestart = async () => {
+    onStop();
+    onStart();
+  };
+
   return (
     <div class="h-full w-full bg-gray-800 text-white p-6 flex flex-col items-center justify-center">
       <h1 class="text-4xl font-bold mb-6">Chess Music Generator</h1>
@@ -165,6 +181,19 @@ const ChessMusicGenerator = () => {
           class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
         >
           Stop Music
+        </button>
+        <button
+          onClick={onResume}
+          disabled={isPlaying()}
+          class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Resume Music
+        </button>
+        <button
+          onClick={onRestart}
+          class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Restart Music
         </button>
         <button
           onClick={onDownload}
