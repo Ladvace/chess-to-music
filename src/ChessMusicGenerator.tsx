@@ -1,4 +1,4 @@
-import { createSignal, onCleanup } from "solid-js";
+import { Show, createEffect, createSignal, onCleanup } from "solid-js";
 import * as Tone from "tone";
 import pgnParser from "pgn-parser";
 
@@ -131,19 +131,21 @@ const ChessMusicGenerator = () => {
     }, 500);
   };
 
-  const onStop = async () => {
+  const onStop = () => {
     setIsPlaying(false);
-    timeouts.forEach((timeout) => clearTimeout(timeout));
     clearInterval(progressInterval);
-    setProgress(0);
+
+    timeouts.forEach((timeout) => clearTimeout(timeout));
+    timeouts = [];
+
     sequence.stop();
     Tone.Transport.cancel();
 
     if (recorder) {
-      const recording = await recorder.stop();
-      recordingUrl = URL.createObjectURL(recording);
-      recorder.dispose();
-      recorder = null;
+      recorder.stop().then(() => {
+        recorder?.dispose();
+        recorder = null;
+      });
     }
   };
 
@@ -157,6 +159,7 @@ const ChessMusicGenerator = () => {
 
   const onRestart = async () => {
     onStop();
+    setProgress(0);
     onStart();
   };
 
@@ -173,6 +176,18 @@ const ChessMusicGenerator = () => {
     onStop();
   });
 
+  const onReset = () => {
+    onStop();
+    setProgress(0);
+    setTotalDuration(0);
+  };
+
+  createEffect(() => {
+    if (pgn()) {
+      onReset();
+    }
+  });
+
   return (
     <div class="h-full w-full bg-gray-800 text-white p-6 flex flex-col items-center justify-center">
       <h1 class="text-4xl font-bold mb-6">Chess Music Generator</h1>
@@ -182,38 +197,48 @@ const ChessMusicGenerator = () => {
         class="bg-gray-700 p-3 w-full h-64 text-white mb-4 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-600"
         placeholder="Enter your PGN here..."
       />
-      <div class="w-full mb-4 bg-gray-500 rounded-full h-4 overflow-hidden">
-        <div
-          class="h-full bg-green-500"
-          style={`width: ${(progress() / totalDuration()) * 100}%`}
-        />
-      </div>
+      <Show when={totalDuration()}>
+        <div class="w-full mb-4 bg-gray-500 rounded-full h-4 overflow-hidden">
+          <div
+            class="h-full bg-green-500"
+            style={`width: ${(progress() / totalDuration()) * 100}%`}
+          />
+        </div>
+      </Show>
       <div class="flex flex-col sm:flex-row gap-2">
         <button
           onClick={onStart}
           disabled={isPlaying()}
-          class="bg-green-500 px-4 py-2 rounded-md"
+          class="bg-green-500 px-4 py-2 rounded-md disabled:cursor-not-allowed"
         >
           Start
         </button>
         <button
           onClick={onStop}
           disabled={!isPlaying()}
-          class="bg-red-500 px-4 py-2 rounded-md"
+          class="bg-red-500 px-4 py-2 rounded-md disabled:cursor-not-allowed"
         >
           Stop
         </button>
         <button
           onClick={onResume}
-          disabled={isPlaying()}
-          class="bg-yellow-500 px-4 py-2 rounded-md"
+          disabled={isPlaying() || progress() === 0}
+          class="bg-blue-500 px-4 py-2 rounded-md disabled:cursor-not-allowed"
         >
           Resume
         </button>
-        <button onClick={onRestart} class="bg-purple-500 px-4 py-2 rounded-md">
+        <button
+          onClick={onRestart}
+          disabled={!isPlaying() && progress() === 0}
+          class="bg-yellow-500 px-4 py-2 rounded-md disabled:cursor-not-allowed"
+        >
           Restart
         </button>
-        <button onClick={onDownload} class="bg-blue-500 px-4 py-2 rounded-md">
+        <button
+          onClick={onDownload}
+          disabled={progress() === totalDuration()}
+          class="bg-purple-500 px-4 py-2 rounded-md disabled:cursor-not-allowed"
+        >
           Download
         </button>
       </div>
