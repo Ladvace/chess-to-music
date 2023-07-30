@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
 import * as Tone from "tone";
 import pgnParser from "pgn-parser";
 
@@ -13,7 +13,6 @@ const piano = new Tone.Sampler({
   baseUrl: "https://tonejs.github.io/audio/salamander/",
 }).toDestination();
 
-// Create a reverb effect
 const reverb = new Tone.Reverb({
   decay: 1.5,
   wet: 0.4,
@@ -21,11 +20,9 @@ const reverb = new Tone.Reverb({
 
 piano.connect(reverb);
 
-// Add a delay effect
 const delay = new Tone.FeedbackDelay("8n", 0.5).toDestination();
 piano.connect(delay);
 
-// Use a Tone.Sequence for more dynamic beat
 const synth = new Tone.Synth().toDestination();
 const notes = ["C2", "D2", "E2", "A2"];
 const sequence = new Tone.Sequence(
@@ -36,12 +33,10 @@ const sequence = new Tone.Sequence(
   "4n"
 ).start(0);
 
-// Vary the reverb effect over time
 Tone.Transport.scheduleRepeat((time) => {
   reverb.wet.value = Math.random() * 0.5;
 }, "4n");
 
-// Start the transport
 Tone.Transport.start();
 
 let timeouts: number[] = [];
@@ -85,14 +80,14 @@ const move2note = (move: string): string => {
   return note + octave;
 };
 
-const generateChessMusic = async (pgn: string): Promise<void> => {
+const generateChessMusic = async (pgn: string): Promise<number> => {
   const parsed = pgnParser.parse(pgn);
-  await Tone.start(); // Start audio context
+  await Tone.start();
 
-  // Clear previous timeouts
   timeouts.forEach((timeout) => clearTimeout(timeout));
   timeouts = [];
 
+  const delayBetweenNotes = 500; // milliseconds
   parsed[0].moves.forEach((move, index) => {
     const note = move2note(move.move);
     const duration = piece2duration(move.move);
@@ -101,41 +96,68 @@ const generateChessMusic = async (pgn: string): Promise<void> => {
       timeouts.push(
         setTimeout(
           () => piano.triggerAttackRelease(note, duration, Tone.now(), volume),
-          index * 500
+          index * delayBetweenNotes
         )
       );
     }
   });
 
-  // Start recording
   recorder = new Tone.Recorder();
   piano.connect(recorder);
   recorder.start();
+
+  const lastMoveTime = parsed[0].moves.length * delayBetweenNotes;
+  setTimeout(() => {
+    sequence.stop();
+    Tone.Transport.cancel();
+  }, lastMoveTime);
+
+  return lastMoveTime;
 };
 
 const ChessMusicGenerator = () => {
   const [pgn, setPgn] = createSignal("");
   const [isPlaying, setIsPlaying] = createSignal(false);
+  const [progress, setProgress] = createSignal(0);
+  const [totalDuration, setTotalDuration] = createSignal(0);
+  let progressInterval: ReturnType<typeof setTimeout>;
 
   const onStart = async () => {
     setIsPlaying(true);
-    await generateChessMusic(pgn());
+    const duration = await generateChessMusic(pgn());
+    setTotalDuration(duration);
+    progressInterval = setInterval(() => {
+      setProgress((oldProgress) => oldProgress + 500);
+    }, 500);
   };
 
   const onStop = async () => {
     setIsPlaying(false);
-    // Clear all timeouts and stop the music
     timeouts.forEach((timeout) => clearTimeout(timeout));
-    piano.releaseAll();
+    clearInterval(progressInterval);
+    setProgress(0);
     sequence.stop();
+    Tone.Transport.cancel();
 
-    // Stop the recording and generate a Blob
     if (recorder) {
       const recording = await recorder.stop();
       recordingUrl = URL.createObjectURL(recording);
       recorder.dispose();
       recorder = null;
     }
+  };
+
+  const onResume = async () => {
+    setIsPlaying(true);
+    await generateChessMusic(pgn());
+    progressInterval = setInterval(() => {
+      setProgress((oldProgress) => oldProgress + 500);
+    }, 500);
+  };
+
+  const onRestart = async () => {
+    onStop();
+    onStart();
   };
 
   const onDownload = () => {
@@ -147,17 +169,9 @@ const ChessMusicGenerator = () => {
     }
   };
 
-  const onResume = async () => {
-    if (!isPlaying()) {
-      setIsPlaying(true);
-      await generateChessMusic(pgn());
-    }
-  };
-
-  const onRestart = async () => {
+  onCleanup(() => {
     onStop();
-    onStart();
-  };
+  });
 
   return (
     <div class="h-full w-full bg-gray-800 text-white p-6 flex flex-col items-center justify-center">
@@ -168,38 +182,39 @@ const ChessMusicGenerator = () => {
         class="bg-gray-700 p-3 w-full h-64 text-white mb-4 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-600"
         placeholder="Enter your PGN here..."
       />
-      <div class="flex gap-2">
+      <div class="w-full mb-4 bg-gray-500 rounded-full h-4 overflow-hidden">
+        <div
+          class="h-full bg-green-500"
+          style={`width: ${(progress() / totalDuration()) * 100}%`}
+        />
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2">
         <button
           onClick={onStart}
           disabled={isPlaying()}
-          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          class="bg-green-500 px-4 py-2 rounded-md"
         >
-          Start Music
+          Start
         </button>
         <button
           onClick={onStop}
-          class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          disabled={!isPlaying()}
+          class="bg-red-500 px-4 py-2 rounded-md"
         >
-          Stop Music
+          Stop
         </button>
         <button
           onClick={onResume}
           disabled={isPlaying()}
-          class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          class="bg-yellow-500 px-4 py-2 rounded-md"
         >
-          Resume Music
+          Resume
         </button>
-        <button
-          onClick={onRestart}
-          class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Restart Music
+        <button onClick={onRestart} class="bg-purple-500 px-4 py-2 rounded-md">
+          Restart
         </button>
-        <button
-          onClick={onDownload}
-          class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Download Music
+        <button onClick={onDownload} class="bg-blue-500 px-4 py-2 rounded-md">
+          Download
         </button>
       </div>
     </div>
