@@ -1,34 +1,56 @@
-## Usage
+# Chess Music Generator
 
-Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
+This application generates a unique music based on a chess game, using a provided PGN (Portable Game Notation). It's built using [SolidJS](https://www.solidjs.com/) and utilizes [pgn-parser](https://github.com/kevinludwig/pgn-parser) for parsing the chess games, along with [Tone.js](https://github.com/Tonejs/Tone.js) for music synthesis.
 
-This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
+## How It Works
 
-```bash
-$ npm install # or pnpm install or yarn install
+1. The user inputs a PGN string, which contains a record of a chess game.
+2. The PGN input is parsed by `pgn-parser`, converting the chess moves into a format the application can use.
+3. Each chess move corresponds to a musical note, which is determined by factors such as the type of piece moved, the destination square, and the type of move (e.g., capture, check). Special moves like castling or promotion trigger unique musical effects.
+4. `Tone.js` takes the resulting sequence of notes and plays the generated music.
+
+Each chess piece is mapped to a specific pitch or set of pitches:
+
+- Pawn: C
+- Knight: D
+- Bishop: E
+- Rook: F
+- Queen: G
+- King: A
+
+In this iteration of the algorithm, white moves are played in the C4 octave, and black moves are played in the C3 octave.
+
+# Steps ▶️
+
+```
+# Clone this repository
+$ git clone https://github.com/Ladvace/chess-to-music
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+```
+# Go into the repository
+$ cd chess-to-music
+```
 
-## Available Scripts
+```
+# Install dependencies
+$ pnpm install
+```
 
-In the project directory, you can run:
+```
+# Start the project in development
+$ pnpm dev
+```
 
-### `npm run dev` or `npm start`
+## Future Plans
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- Implement an option for the user to specify the mapping between chess moves and musical notes.
+- Allow the user to adjust musical parameters.
 
-The page will reload if you make edits.<br>
+## Contributing
 
-### `npm run build`
+Contributions are welcome. Please fork this repository and create a pull request if you have something valuable to add.
 
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
+## License
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
-
-## Deployment
-
-You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)
+This project is licensed under the MIT License.
