@@ -42,10 +42,10 @@ $ pnpm install
 $ pnpm dev
 ```
 
-## Future Plans
+## Roadmap
 
-- Implement an option for the user to specify the mapping between chess moves and musical notes.
-- Allow the user to adjust musical parameters.
+- [ ] Makes music sharable
+- [ ] Allow the user to adjust musical parameters.
 
 ## Contributing
 
