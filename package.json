@@ -11,6 +11,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/pgn-parser": "^2.1.0",
+    "@vercel/analytics": "^1.0.2",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.27",
     "solid-devtools": "^0.27.3",
@@ -20,8 +21,6 @@
     "vite-plugin-solid": "^2.7.0"
   },
   "dependencies": {
-    "chess.js": "1.0.0-beta.6",
-    "chessboardjsx": "^2.4.7",
     "install": "^0.13.0",
     "pgn-parser": "^2.2.0",
     "solid-js": "^1.7.6",
